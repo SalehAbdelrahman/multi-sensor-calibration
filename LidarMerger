@@ -1,0 +1,67 @@
+#!/usr/bin/env python
+
+import rospy
+import sensor_msgs.point_cloud2 as pc2
+from sensor_msgs.msg import PointCloud2
+import tf2_ros
+import tf2_sensor_msgs.tf2_sensor_msgs  # for transforming pointclouds
+from tf.transformations import *
+
+class LidarMerger:
+    def __init__(self):
+        rospy.init_node('lidar_merger')
+
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf_buffer)
+
+        self.sub_a = rospy.Subscriber('/lidar_a/points', PointCloud2, self.callback_a)
+        self.sub_b = rospy.Subscriber('/lidar_b/points', PointCloud2, self.callback_b)
+
+        self.pub = rospy.Publisher('/merged_cloud', PointCloud2, queue_size=1)
+
+        self.cloud_a = None
+        self.cloud_b = None
+
+    def callback_a(self, msg):
+        self.cloud_a = msg
+        self.try_publish()
+
+    def callback_b(self, msg):
+        self.cloud_b = msg
+        self.try_publish()
+
+    def try_publish(self):
+        if self.cloud_a is None or self.cloud_b is None:
+            return
+
+        try:
+            # Look up transform from cloud_b frame to cloud_a frame
+            transform = self.tf_buffer.lookup_transform(
+                self.cloud_a.header.frame_id,  # target frame
+                self.cloud_b.header.frame_id,  # source frame
+                rospy.Time(0),
+                rospy.Duration(0.5)
+            )
+
+            # Transform cloud_b to cloud_a's frame
+            transformed_b = tf2_sensor_msgs.do_transform_cloud(self.cloud_b, transform)
+
+            # Combine point clouds
+            combined = self.concatenate_clouds(self.cloud_a, transformed_b)
+            combined.header.stamp = rospy.Time.now()  # Update timestamp
+            self.pub.publish(combined)
+
+        except Exception as e:
+            rospy.logwarn("Transform failed: {}".format(e))
+
+    def concatenate_clouds(self, cloud1, cloud2):
+        points1 = list(pc2.read_points(cloud1, skip_nans=True))
+        points2 = list(pc2.read_points(cloud2, skip_nans=True))
+
+        all_points = points1 + points2
+        merged = pc2.create_cloud(cloud1.header, cloud1.fields, all_points)
+        return merged
+
+if __name__ == '__main__':
+    merger = LidarMerger()
+    rospy.spin()

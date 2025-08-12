@@ -2,13 +2,17 @@
 <launch>    
 	<!-- Lidar: Start detector for the Velodyne -->
 	<node pkg="lidar_detector" type="lidar_detector_node" name="lidar_detector"/>
+	<!--remap from="/lidar_points" to="/your_lidar_topic"/-->
 
-	<!-- Stereo camera: Start detector for ueye stereo camera -->
-	<node pkg="stereo_detector" type="stereo_detector_node" name="stereo_detector"/>
+
+	<!-- Mono camera: Start detector for ueye mono camera -->
+	<node pkg="mono_detector" type="mono_detector_node" name="mono_detector"/>
+	<!--remap from="/mono_camera/image_raw" to="/your_mono_camera_topic"/-->
 
 	<!-- Radar: Start detector for radar -->
 	<!-- _selection_basis: either rcs or range -->
 	<!-- _selection_criterion: either min or max -->
 	<node pkg="radar_detector" type="radar_detector_node" name="radar_detector" 
 	      args="_minimum_RCS:=-10 _maximum_RCS:=15 _max_range_object:=5 _selection_basis:=range _selection_criterion:=min"/>
+	<!--remap from="/radar_points" to="/your_3d_radar_topic"/-->
 </launch>

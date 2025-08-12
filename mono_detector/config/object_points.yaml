@@ -2,3 +2,4 @@
  - {x: 0.24, y: 0, z: 0}
  - {x: 0, y: 0.24, z: 0}
  - {x: 0.24, y: 0.24, z: 0}
+# coordinates of the 4 centers of the circles, 0,0,0 being the reference circle.
